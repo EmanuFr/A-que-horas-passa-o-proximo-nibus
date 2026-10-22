@@ -1,29 +1,29 @@
-let registros = [];
+const registros = [];
 
-const registrar_chegada = function (data, horario, linha) {
-  let registro = {
-    data: data,
-    horario: horario,
-    linha: linha,
-  };
-
-  registros[registros.length] = registro;
+const registrarChegada = (data, horario, linha) => {
+  registros.push({ data, horario, linha });
 };
 
-const buscar_chegada = function (data, horario, linha) {
-  for (busca of registros) {
-    if (
-      busca.data == data &&
-      busca.horario == horario &&
-      busca.linha == linha
-    ) {
-      return console.log(busca);
-    }
-  }
-  console.log("Nao encontrado");
+const buscarChegada = (data, horario, linha) => {
+  const encontrado = registros.find(
+    (r) => r.data === data && r.horario === horario && r.linha === linha,
+  );
+  console.log(encontrado ?? "Não encontrado");
+  return encontrado;
 };
 
-const proximo = function (data, horario) {};
+const proximo = (data, horario) => {
+  const referencia = `${data} ${horario}`;
+
+  const proximo = registros
+    .filter((r) => `${r.data} ${r.horario}` >= referencia)
+    .sort((a, b) =>
+      `${a.data} ${a.horario}`.localeCompare(`${b.data} ${b.horario}`),
+    )[0];
+
+  console.log(proximo ?? "Nenhuma chegada futura");
+  return proximo;
+};
 
 const proximo_da_linha = function (data, horario, linha) {};
 

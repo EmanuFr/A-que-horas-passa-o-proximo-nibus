@@ -2,7 +2,102 @@ const registros = [];
 const chave = (r) => `${r.data} ${r.horario}`;
 
 const registrarChegada = (data, horario, linha) => {
-  registros.push({ data, horario, linha });
+  const chegada = { data, horario, linha };
+
+  const existente = registros.find(
+    (r) =>
+      r.data === data &&
+      r.horario === horario &&
+      r.linha === linha,
+  );
+
+  if (existente) {
+    return false;
+  }
+
+  registros.push(chegada);
+  raiz = inserirNaArvore(raiz, chegada);
+
+  return true;
+};
+
+let raiz = null;
+
+const compararChegadas = function (a, b) {
+  const instanteA = `${a.data} ${a.horario}`;
+  const instanteB = `${b.data} ${b.horario}`;
+
+  if (instanteA < instanteB) return -1;
+  if (instanteA > instanteB) return 1;
+
+  if (a.linha < b.linha) return -1;
+  if (a.linha > b.linha) return 1;
+
+  return 0;
+};
+
+const inserirNaArvore = function (no, chegada) {
+  if (no === null) {
+    return {
+      chegada: chegada,
+      esquerda: null,
+      direita: null,
+    };
+  }
+
+  const comparacao = compararChegadas(chegada, no.chegada);
+
+  if (comparacao < 0) {
+    no.esquerda = inserirNaArvore(no.esquerda, chegada);
+  } else if (comparacao > 0) {
+    no.direita = inserirNaArvore(no.direita, chegada);
+  }
+
+  return no;
+};
+
+const calcularAltura = function (no) {
+  if (no === null) {
+    return 0;
+  }
+
+  const esquerda = calcularAltura(no.esquerda);
+  const direita = calcularAltura(no.direita);
+
+  return 1 + Math.max(esquerda, direita);
+};
+
+const removerDaArvore = function (no, chegada) {
+  if (no === null) {
+    return null;
+  }
+
+  const comparacao = compararChegadas(chegada, no.chegada);
+
+  if (comparacao < 0) {
+    no.esquerda = removerDaArvore(no.esquerda, chegada);
+  } else if (comparacao > 0) {
+    no.direita = removerDaArvore(no.direita, chegada);
+  } else {
+    if (no.esquerda === null) {
+      return no.direita;
+    }
+
+    if (no.direita === null) {
+      return no.esquerda;
+    }
+
+    let sucessor = no.direita;
+
+    while (sucessor.esquerda !== null) {
+      sucessor = sucessor.esquerda;
+    }
+
+    no.chegada = sucessor.chegada;
+    no.direita = removerDaArvore(no.direita, sucessor.chegada);
+  }
+
+  return no;
 };
 
 const buscarChegada = (data, horario, linha) => {
@@ -51,7 +146,10 @@ const entre = function (data1, horario1, data2, horario2) {
 
 const remover_chegada = function (data, horario, linha) {
   const indice = registros.findIndex(
-    (r) => r.data === data && r.horario === horario && r.linha === linha,
+    (r) =>
+      r.data === data &&
+      r.horario === horario &&
+      r.linha === linha,
   );
 
   if (indice === -1) {
@@ -59,12 +157,21 @@ const remover_chegada = function (data, horario, linha) {
     return false;
   }
 
+  const chegada = registros[indice];
+
+  raiz = removerDaArvore(raiz, chegada);
   registros.splice(indice, 1);
+
   console.log("Chegada removida com sucesso");
   return true;
 };
 
-const altura = function () {}; // precisa implementar a estrutura de arvore para fazer essa função
+const altura = function () {
+  const resultado = calcularAltura(raiz);
+
+  console.log(resultado);
+  return resultado;
+};
 
 const espera_semana = function (linha, data, horario, k) {
   const resultados = [];
@@ -123,18 +230,26 @@ const rl = readline.createInterface({
 });
 
 console.log(
-  "Comandos: REG d h l | BUSCA d h l | PROX d h | PROXL d h l | ENTRE d1 h1 d2 h2 | REM d h l | ESPERA l d h k | SAIR",
+  "Comandos: REG d h l | BUSCA d h l | PROX d h | PROXL d h l | ENTRE d1 h1 d2 h2 | REM d h l | ALT | ESPERA l d h k | SAIR",
 );
 rl.prompt();
 
 rl.on("line", (linha) => {
-  const [cmd, ...a] = linha.trim().split(/\s+/);
+  const texto = linha.trim();
+  if (texto === "" || texto.startsWith("#")) {
+    return;
+  }
+
+  const [cmd, ...a] = texto.split(/\s+/);
 
   switch ((cmd || "").toUpperCase()) {
-    case "REG":
-      registrarChegada(a[0], a[1], a[2]);
-      console.log("OK");
+    case "TITLE":
       break;
+    case "REG": {
+      const cadastrado = registrarChegada(a[0], a[1], a[2]);
+      console.log(cadastrado ? "OK" : "DUPLICADO");
+      break;
+  }
     case "BUSCA":
       buscarChegada(a[0], a[1], a[2]);
       break;
@@ -150,6 +265,10 @@ rl.on("line", (linha) => {
     case "REM":
       remover_chegada(a[0], a[1], a[2]);
       break;
+    case "ALT":
+      altura();
+      break;
+    case "SEMANA":
     case "ESPERA":
       espera_semana(a[0], a[1], a[2], Number(a[3]));
       break;
@@ -159,7 +278,7 @@ rl.on("line", (linha) => {
     case "":
       break;
     default:
-      console.log("Comando inválido");
+      console.log("Comando inválido", linha);
   }
   rl.prompt();
 });

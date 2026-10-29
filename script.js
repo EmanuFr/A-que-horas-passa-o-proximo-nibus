@@ -1,6 +1,24 @@
 const registros = [];
 const chave = (r) => `${r.data} ${r.horario}`;
 
+const insertionSort = function (array, comparador) {
+  const resultado = array.slice();
+
+  for (let i = 1; i < resultado.length; i++) {
+    const atual = resultado[i];
+    let j = i - 1;
+
+    while (j >= 0 && comparador(resultado[j], atual) > 0) {
+      resultado[j + 1] = resultado[j];
+      j--;
+    }
+
+    resultado[j + 1] = atual;
+  }
+
+  return resultado;
+};
+
 const registrarChegada = (data, horario, linha) => {
   const chegada = { data, horario, linha };
 
@@ -111,11 +129,13 @@ const buscarChegada = (data, horario, linha) => {
 const proximo = (data, horario) => {
   const referencia = `${data} ${horario}`;
 
-  const proximo = registros
-    .filter((r) => `${r.data} ${r.horario}` >= referencia)
-    .sort((a, b) =>
-      `${a.data} ${a.horario}`.localeCompare(`${b.data} ${b.horario}`),
-    )[0];
+  const filtrados = registros.filter(
+    (r) => `${r.data} ${r.horario}` >= referencia,
+  );
+
+  const proximo = insertionSort(filtrados, (a, b) =>
+    `${a.data} ${a.horario}`.localeCompare(`${b.data} ${b.horario}`),
+  )[0];
 
   console.log(proximo ?? "Nenhuma chegada futura");
   return proximo;
@@ -124,9 +144,13 @@ const proximo = (data, horario) => {
 const proximo_da_linha = function (data, horario, linha) {
   const referencia = `${data} ${horario}`;
 
-  const resultado = registros
-    .filter((r) => r.linha === linha && chave(r) >= referencia)
-    .sort((a, b) => chave(a).localeCompare(chave(b)))[0];
+  const filtrados = registros.filter(
+    (r) => r.linha === linha && chave(r) >= referencia,
+  );
+
+  const resultado = insertionSort(filtrados, (a, b) =>
+    chave(a).localeCompare(chave(b)),
+  )[0];
 
   console.log(resultado ?? "Nenhuma chegada futura para a linha");
   return resultado;
@@ -136,9 +160,13 @@ const entre = function (data1, horario1, data2, horario2) {
   const inicio = `${data1} ${horario1}`;
   const fim = `${data2} ${horario2}`;
 
-  const resultado = registros
-    .filter((r) => chave(r) >= inicio && chave(r) <= fim)
-    .sort((a, b) => chave(a).localeCompare(chave(b)));
+  const filtrados = registros.filter(
+    (r) => chave(r) >= inicio && chave(r) <= fim,
+  );
+
+  const resultado = insertionSort(filtrados, (a, b) =>
+    chave(a).localeCompare(chave(b)),
+  );
 
   console.log(resultado.length ? resultado : "Nenhuma chegada no intervalo");
   return resultado;
@@ -182,12 +210,14 @@ const espera_semana = function (linha, data, horario, k) {
 
     const dataConsulta = `${dia.getFullYear()}-${String(dia.getMonth() + 1).padStart(2, "0")}-${String(dia.getDate()).padStart(2, "0")}`;
 
-    const chegadas = registros
-      .filter(
-        (r) =>
-          r.linha === linha && r.data === dataConsulta && r.horario >= horario,
-      )
-      .sort((a, b) => a.horario.localeCompare(b.horario));
+    const filtrados = registros.filter(
+      (r) =>
+        r.linha === linha && r.data === dataConsulta && r.horario >= horario,
+    );
+
+    const chegadas = insertionSort(filtrados, (a, b) =>
+      a.horario.localeCompare(b.horario),
+    );
 
     if (chegadas.length === 0) {
       console.log(`${dataConsulta}: A linha não passou mais nesse dia`);

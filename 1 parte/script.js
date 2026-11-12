@@ -1,36 +1,12 @@
-const registros = [];
 const chave = (r) => `${r.data} ${r.horario}`;
-
-const insertionSort = function (array, comparador) {
-  const resultado = array.slice();
-
-  for (let i = 1; i < resultado.length; i++) {
-    const atual = resultado[i];
-    let j = i - 1;
-
-    while (j >= 0 && comparador(resultado[j], atual) > 0) {
-      resultado[j + 1] = resultado[j];
-      j--;
-    }
-
-    resultado[j + 1] = atual;
-  }
-
-  return resultado;
-};
 
 const registrarChegada = (data, horario, linha) => {
   const chegada = { data, horario, linha };
 
-  const existente = registros.find(
-    (r) => r.data === data && r.horario === horario && r.linha === linha,
-  );
-
-  if (existente) {
+    if (buscarNaArvore(chegada) !== null) {
     return false;
   }
 
-  registros.push(chegada);
   raiz = inserirNaArvore(raiz, chegada);
 
   return true;
@@ -93,36 +69,59 @@ const calcularAltura = function (no) {
     return 0;
   }
 
-  const alturas = new Map();
-  const pilha = [no];
+  let nivel = [no];
+  let altura = 0;
 
-  while (pilha.length > 0) {
-    const atual = pilha[pilha.length - 1];
+  while (nivel.length > 0) {
+    altura++;
+    const proximoNivel = [];
 
-    const esquerdaPronta =
-      atual.esquerda === null || alturas.has(atual.esquerda);
-    const direitaPronta = atual.direita === null || alturas.has(atual.direita);
-
-    if (!esquerdaPronta) {
-      pilha.push(atual.esquerda);
-      continue;
+    for (const atual of nivel) {
+      if (atual.esquerda !== null) proximoNivel.push(atual.esquerda);
+      if (atual.direita !== null) proximoNivel.push(atual.direita);
     }
 
-    if (!direitaPronta) {
-      pilha.push(atual.direita);
-      continue;
-    }
-
-    const alturaEsquerda =
-      atual.esquerda === null ? 0 : alturas.get(atual.esquerda);
-    const alturaDireita =
-      atual.direita === null ? 0 : alturas.get(atual.direita);
-
-    alturas.set(atual, 1 + Math.max(alturaEsquerda, alturaDireita));
-    pilha.pop();
+    nivel = proximoNivel;
   }
 
-  return alturas.get(no);
+  return altura;
+};
+
+// Busca uma chegada descendo pela árvore. Devolve o nó ou null.
+const buscarNaArvore = function (chegada) {
+  let atual = raiz;
+
+  while (atual !== null) {
+    const comparacao = compararChegadas(chegada, atual.chegada);
+
+    if (comparacao === 0) return atual;
+
+    atual = comparacao < 0 ? atual.esquerda : atual.direita;
+  }
+
+  return null;
+};
+
+// Percorre a árvore em ordem, começando pela primeira chegada a partir
+// de "referencia" ("AAAA-MM-DD HH:MM:SS"). Para quando visitar devolve true.
+const percorrerAPartirDe = function (referencia, visitar) {
+  const pilha = [];
+  let atual = raiz;
+
+  while (atual !== null || pilha.length > 0) {
+    if (atual !== null) {
+      if (chave(atual.chegada) >= referencia) {
+        pilha.push(atual);
+        atual = atual.esquerda;
+      } else {
+        atual = atual.direita;
+      }
+    } else {
+      const no = pilha.pop();
+      if (visitar(no.chegada)) return;
+      atual = no.direita;
+    }
+  }
 };
 
 const removerDaArvore = function (no, chegada) {
@@ -183,19 +182,19 @@ const removerDaArvore = function (no, chegada) {
 };
 
 const buscarChegada = (data, horario, linha) => {
-  const encontrado = registros.find(
-    (r) => r.data === data && r.horario === horario && r.linha === linha,
-  );
-  console.log(encontrado ? "ACHOU" : "NAO");
+  const encontrado = buscarNaArvore({ data, horario, linha });
+  console.log(encontrado !== null ? "ACHOU" : "NAO");
   return encontrado;
 };
 
 const proximo = (data, horario) => {
   const referencia = `${data} ${horario}`;
 
-  const filtrados = registros.filter((r) => chave(r) >= referencia);
-
-  const resultado = insertionSort(filtrados, compararChegadas)[0];
+  let resultado = null;
+  percorrerAPartirDe(referencia, (c) => {
+    resultado = c;
+    return true;
+  });
 
   console.log(
     resultado
@@ -208,11 +207,12 @@ const proximo = (data, horario) => {
 const proximo_da_linha = function (data, horario, linha) {
   const referencia = `${data} ${horario}`;
 
-  const filtrados = registros.filter(
-    (r) => r.linha === linha && chave(r) >= referencia,
-  );
-
-  const resultado = insertionSort(filtrados, compararChegadas)[0];
+  let resultado = null;
+  percorrerAPartirDe(referencia, (c) => {
+    if (c.linha !== linha) return false;
+    resultado = c;
+    return true;
+  });
 
   console.log(resultado ? `${resultado.data} ${resultado.horario}` : "NENHUM");
   return resultado;
@@ -222,11 +222,12 @@ const entre = function (data1, horario1, data2, horario2) {
   const inicio = `${data1} ${horario1}`;
   const fim = `${data2} ${horario2}`;
 
-  const filtrados = registros.filter(
-    (r) => chave(r) >= inicio && chave(r) <= fim,
-  );
-
-  const resultado = insertionSort(filtrados, compararChegadas);
+  const resultado = [];
+  percorrerAPartirDe(inicio, (c) => {
+    if (chave(c) > fim) return true;
+    resultado.push(c);
+    return false;
+  });
 
   console.log(resultado.length);
   for (const r of resultado) {
@@ -236,19 +237,14 @@ const entre = function (data1, horario1, data2, horario2) {
 };
 
 const remover_chegada = function (data, horario, linha) {
-  const indice = registros.findIndex(
-    (r) => r.data === data && r.horario === horario && r.linha === linha,
-  );
+  const no = buscarNaArvore({ data, horario, linha });
 
-  if (indice === -1) {
+  if (no === null) {
     console.log("NAO");
     return false;
   }
 
-  const chegada = registros[indice];
-
-  raiz = removerDaArvore(raiz, chegada);
-  registros.splice(indice, 1);
+  raiz = removerDaArvore(raiz, no.chegada);
 
   console.log("OK");
   return true;
@@ -270,16 +266,15 @@ const espera_semana = function (linha, data, horario, k) {
 
     const dataConsulta = `${dia.getFullYear()}-${String(dia.getMonth() + 1).padStart(2, "0")}-${String(dia.getDate()).padStart(2, "0")}`;
 
-    const filtrados = registros.filter(
-      (r) =>
-        r.linha === linha && r.data === dataConsulta && r.horario >= horario,
-    );
+    let chegada = null;
+    percorrerAPartirDe(`${dataConsulta} ${horario}`, (c) => {
+      if (c.data !== dataConsulta) return true;
+      if (c.linha !== linha) return false;
+      chegada = c;
+      return true;
+    });
 
-    const chegadas = insertionSort(filtrados, (a, b) =>
-      a.horario.localeCompare(b.horario),
-    );
-
-    if (chegadas.length === 0) {
+    if (chegada === null) {
       console.log(`${dataConsulta} NAOPASSOU`);
 
       resultados.push({
@@ -289,8 +284,6 @@ const espera_semana = function (linha, data, horario, k) {
 
       continue;
     }
-
-    const chegada = chegadas[0];
 
     const [horaInicio, minutoInicio, segundoInicio] = horario
       .split(":")

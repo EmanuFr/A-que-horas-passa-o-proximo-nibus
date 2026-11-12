@@ -53,6 +53,7 @@ fn executar(sistema: &mut Sistema, comando: &Comando, saida: &mut Vec<String>) {
             let k: u32 = a[3].parse().unwrap_or(0);
             saida.extend(sistema.espera_semanal(&a[0], &a[1], &a[2], k));
         }
+        "LINHAS" => saida.extend(sistema.linhas(&a[0], &a[1], &a[2], &a[3])),
         outro => eprintln!("Comando inválido: {outro}"),
     }
 }

@@ -110,4 +110,24 @@ impl Sistema {
             })
             .collect()
     }
+
+    pub fn linhas(&self, data1: &str, horario1: &str, data2: &str, horario2: &str) -> Vec<String> {
+        let minimo = Chave { data: data1, horario: horario1, linha: "" };
+        let fim = (data2, horario2);
+
+        let mut encontrados: Vec<String> = Vec::new();
+        for c in self.arvore.iter_desde(minimo) {
+            if (c.data.as_str(), c.horario.as_str()) > fim {
+                break;
+            }
+            if !c.removida && !encontrados.iter().any(|linha| linha == &c.linha) {
+                encontrados.push(c.linha.clone());
+            }
+        }
+
+        let mut saida = Vec::with_capacity(encontrados.len() + 1);
+        saida.push(encontrados.len().to_string());
+        saida.extend(encontrados);
+        saida
+    }
 }
